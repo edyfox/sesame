@@ -1,0 +1,16 @@
+#!/bin/sh
+
+case "$1" in
+  open )
+    echo open > /run/sesame.pipe
+    ;;
+  close )
+    echo close > /run/sesame.pipe
+    ;;
+  status )
+    tail -1 /var/log/sesame.log
+    ;;
+  * )
+    echo 'Usage: sesame <open|close|status>'
+    ;;
+esac

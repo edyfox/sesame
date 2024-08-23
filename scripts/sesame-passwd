@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+set -e
+PASSFILE=/etc/sesame.pass
+
+
+echo -n 'New passphrase: '
+read -s a
+echo
+echo -n 'Re-enter passphrase: '
+read -s b
+echo
+
+if [ "x$a" != "x$b" ]; then
+  echo "Passphrases don't match!"
+  exit 1
+fi
+
+salt=`genpass 40`
+hash=`echo -n "$salt$a" | sha1sum | awk '{ print $1 }'`
+
+cat <<EOF > $PASSFILE
+$salt
+$hash
+EOF
+
+echo 'Passphrase updated.'
