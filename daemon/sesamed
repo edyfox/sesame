@@ -1,0 +1,42 @@
+#!/bin/sh
+
+if [ "x$1" = 'x--daemon' ]; then
+  nohup "$0" 0<&- &>/dev/null &
+  exit 0
+fi
+
+PIPE=/run/sesame.pipe
+GROUP=www-data
+LOG=/var/log/sesame.log
+
+export LANG=C
+
+log() {
+  echo "[`date`] $1" >> $LOG
+}
+
+rm -f $PIPE
+mkfifo $PIPE
+chown root:$GROUP $PIPE
+chmod 660 $PIPE
+
+while true; do
+  case `cat "$PIPE"` in
+  open )
+    if ! /sbin/iptables -n -L INPUT | grep -q ' dpt:5827 '; then
+      log 'opening the door'
+      /sbin/iptables -I INPUT 1 -p tcp --syn --dport 5827 -j ACCEPT 2>&1 > /dev/null
+      /sbin/ip6tables -I INPUT 1 -p tcp --syn --dport 5827 -j ACCEPT 2>&1 > /dev/null
+    fi
+    ;;
+  close )
+    if /sbin/iptables -n -L INPUT | grep -q ' dpt:5827 '; then
+      log 'closing the door'
+      /sbin/iptables -D INPUT -p tcp --syn --dport 5827 -j ACCEPT 2>&1 > /dev/null
+      /sbin/ip6tables -D INPUT -p tcp --syn --dport 5827 -j ACCEPT 2>&1 > /dev/null
+    fi
+    ;;
+  * )
+    ;;
+  esac
+done

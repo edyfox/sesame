@@ -1,0 +1,6 @@
+#!/bin/sh
+
+if pgrep -x sesamed > /dev/null; then
+  exit 0
+fi
+/root/bin/sesamed --daemon 2>&1 > /dev/null
