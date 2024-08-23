@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+
+# Check if the number of arguments is exactly 1
+if [ "$#" -ne 2 ]; then
+    echo "Usage: $0 <config> <open|close>"
+    exit 1
+fi
+
+# Configuration file name
+config="$1"
+
+# Action (must be "open" or "close")
+action="$2"
+if [[ "$action" != "open" && "$action" != "close" ]]; then
+    echo "Error: Action must be 'open' or 'close'."
+    exit 1
+fi
+
+# Determine the XDG_CONFIG_DIR or fallback to ~/.config
+config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/sesame-client"
+
+# Full path to the configuration file
+config_path="$config_dir/$config"
+
+# Check if the configuration file exists
+if [ ! -f "$config_path" ]; then
+    echo "Configuration file not found: $config_path"
+    exit 1
+fi
+
+# Load the configuration file
+source "$config_path"
+
+# Ensure the necessary variables are set
+if [ -z "$url" ] || [ -z "$phrase" ]; then
+    echo "Error: 'url' or 'phrase' not set in the configuration file."
+    exit 1
+fi
+
+# Verify that the url starts with http:// or https://
+if [[ "$url" != http://* && "$url" != https://* ]]; then
+    echo "Error: 'url' must start with 'http://' or 'https://'."
+    exit 1
+fi
+
+# Temporary file to save cookies
+cookie=$(mktemp)
+
+# Temporary file to save the fetched page
+page=$(mktemp)
+
+# Fetch the web page and save the cookies
+curl -s -c "$cookie" -o "$page" "$url"
+
+# Extract the two strings in each Sha1.hash() call from the web page
+string1=$(grep -oP 'Sha1.hash\("\K[^"]*' "$page" | sed -n '1p')
+string2=$(grep -oP 'Sha1.hash\("\K[^"]*' "$page" | sed -n '2p')
+
+# Hash the extracted salt with passphrase and compute the final hash
+hash1=$(echo -n "$string2$phrase" | sha1sum | awk '{print $1}')
+hash2=$(echo -n "$string1$hash1" | sha1sum | awk '{print $1}')
+
+# Send a POST request with the computed hash as the response
+curl -s -b "$cookie" -d "action=$action&response=$hash2" -o /dev/null "$url"
+
+# Clean up temporary files
+rm -f "$cookie" "$page"
