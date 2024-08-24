@@ -9,7 +9,7 @@ sudo chmod 660 /etc/sesame.pass
 sudo usermod -a -G www-data $USER
 
 # Copy iptables script to the proper directory
-sudo cp iptables /etc/network/if-pre-up.d/iptables
+sudo sh -c './gen-iptables.sh > /etc/network/if-pre-up.d/iptables'
 sudo chmod 700 /etc/network/if-pre-up.d/iptables
 
 sudo mkfifo /var/run/sesame.pipe
