@@ -8,7 +8,7 @@ sudo chmod 660 /etc/sesame.pass
 # Add the current user into www-data group to gain access to sesame.pass
 sudo usermod -a -G www-data $USER
 
-# Copy iptables script to the proper directory
+# Generate iptables script into the proper directory
 sudo sh -c './gen-iptables.sh > /etc/network/if-pre-up.d/iptables'
 sudo chmod 700 /etc/network/if-pre-up.d/iptables
 
