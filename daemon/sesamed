@@ -8,11 +8,17 @@ fi
 PIPE=/run/sesame.pipe
 GROUP=www-data
 LOG=/var/log/sesame.log
+SSH_PORT=`awk '/^Port/ {print $2}' /etc/ssh/sshd_config`
 
 export LANG=C
 
 log() {
   echo "[`date`] $1" >> $LOG
+}
+
+call_iptables() {
+    /sbin/iptables "$@" 2>&1 > /dev/null
+    /sbin/ip6tables "$@" 2>&1 > /dev/null
 }
 
 rm -f $PIPE
@@ -23,17 +29,15 @@ chmod 660 $PIPE
 while true; do
   case `cat "$PIPE"` in
   open )
-    if ! /sbin/iptables -n -L INPUT | grep -q ' dpt:5827 '; then
+    if ! /sbin/iptables -n -L INPUT | grep -q " dpt:$SSH_PORT "; then
       log 'opening the door'
-      /sbin/iptables -I INPUT 1 -p tcp --syn --dport 5827 -j ACCEPT 2>&1 > /dev/null
-      /sbin/ip6tables -I INPUT 1 -p tcp --syn --dport 5827 -j ACCEPT 2>&1 > /dev/null
+      call_iptables -I INPUT 1 -p tcp --syn --dport $SSH_PORT -j ACCEPT
     fi
     ;;
   close )
-    if /sbin/iptables -n -L INPUT | grep -q ' dpt:5827 '; then
+    if /sbin/iptables -n -L INPUT | grep -q " dpt:$SSH_PORT "; then
       log 'closing the door'
-      /sbin/iptables -D INPUT -p tcp --syn --dport 5827 -j ACCEPT 2>&1 > /dev/null
-      /sbin/ip6tables -D INPUT -p tcp --syn --dport 5827 -j ACCEPT 2>&1 > /dev/null
+      call_iptables -D INPUT -p tcp --syn --dport $SSH_PORT -j ACCEPT
     fi
     ;;
   * )
